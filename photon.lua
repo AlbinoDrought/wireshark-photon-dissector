@@ -194,7 +194,7 @@ end
 -- Reads a Photon message from a Photon packet stored in `buf`, starting at `idx` and consuming `len` bytes.
 -- Returns the next index after the message is read.
 function read_message(buf, idx, len, root)
-   local tree = root:add(pf_command_msg, len, "Message")
+   local tree = root:add(pf_command_msg, buf:range(idx, len)):set_text("Message")
    local msg_header_length = 2
    tree:add(pf_command_msg_signifier, buf(idx, 1))
    tree:add(pf_command_msg_type, buf(idx + 1, 1))
@@ -228,8 +228,9 @@ function read_message(buf, idx, len, root)
       tree:add(pf_command_msg_parametercount, buf(idx + 1, 2))
       tree:add(pf_command_msg_parameters, buf(idx + msg_meta_length, data_length))
       return idx + msg_meta_length + data_length
+   else
+      return idx
    end
-   return idx
 end
 
 -- Reads ENet command number `num` from a Photon packet stored in `buf`, starting at `idx`.
@@ -237,7 +238,7 @@ end
 function read_command(buf, idx, num, root)
 
    local command_header_length = 12
-   local tree = root:add(pf_command, command_header_length, string.format("Command #%s", num))
+   local tree = root:add(pf_command, buf:range(idx)):set_text(string.format("Command #%s", num))
    tree:add(pf_cmdheader_commandtype, buf(idx, 1))
    tree:add(pf_cmdheader_channelid, buf(idx + 1, 1))
    tree:add(pf_cmdheader_commandflags, buf(idx + 2, 1))
@@ -247,12 +248,10 @@ function read_command(buf, idx, num, root)
 
    local command_type_info = get_last_field_info(command_type_field)
    local command_length_info = get_last_field_info(command_length_field)
-
-   tree:append_text(string.format(" - %s", command_type_info.display))
-   tree:set_len(command_length_info() + command_header_length)
-
    local command = command_type_info()
    local command_length = command_length_info()
+   tree:append_text(string.format(" - %s", command_type_info.display))
+   tree:set_len(command_length)
    idx = idx + command_header_length
 
    if command == 1 then

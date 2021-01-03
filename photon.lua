@@ -98,6 +98,7 @@ local photon = Proto("photon", "Photon")
 -- protocol header, present once at the top of every packet
 local pf_protoheader_peerid = ProtoField.uint16("photon.peerid", "Peer ID", base.HEX)
 local pf_protoheader_crcenabled = ProtoField.uint8("photon.crcenabled", "CRC enabled", base.HEX)
+local pf_protoheader_crcvalue = ProtoField.uint32("photon.crcvalue", "CRC value", base.DEC)
 local pf_protoheader_commandcount = ProtoField.uint8("photon.commandcount", "Command count", base.DEC)
 local pf_protoheader_timeint = ProtoField.uint32("photon.timeint", "Timestamp", base.DEC)
 local pf_protoheader_challenge = ProtoField.int32("photon.challenge", "Challenge", base.DEC)
@@ -149,6 +150,7 @@ local pf_command_ev_code = ProtoField.uint8("photon.command.operation.eventcode"
 photon.fields = {
     pf_protoheader_peerid,
     pf_protoheader_crcenabled,
+    pf_protoheader_crcvalue,
     pf_protoheader_commandcount,
     pf_protoheader_timeint,
     pf_protoheader_challenge,
@@ -185,6 +187,7 @@ local command_count_field = Field.new("photon.commandcount")
 local command_type_field = Field.new("photon.command.type")
 local command_length_field = Field.new("photon.command.length")
 local command_msg_type_field = Field.new("photon.command.message.type")
+local crcenabled_field = Field.new("photon.crcenabled")
 
 function get_last_field_info(field)
    local tbl = { field() }
@@ -304,6 +307,11 @@ function photon.dissector(buf, pkt, root)
     tree:add(pf_protoheader_commandcount, buf(3, 1))
     tree:add(pf_protoheader_timeint, buf(4, 4))
     tree:add(pf_protoheader_challenge, buf(8, 4))
+
+    if crcenabled_field()() == 0xCC then
+      proto_header_len = 16
+      tree:add(pf_protoheader_crcvalue, buf(12, 4))
+    end
 
     tree:append_text(string.format(", %s command(s)", command_count_field().display))
 

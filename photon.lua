@@ -208,14 +208,14 @@ function read_message(buf, idx, len, root)
    local msg_type = msg_type_info()
    idx = idx + msg_header_length
 
-   if msg_type == 2 then
+   if msg_type == 2 then -- Operation Request
       local msg_meta_length = 3
       local data_length = len - msg_header_length - msg_meta_length
       tree:add(pf_command_op_code, buf(idx, 1))
       tree:add(pf_command_msg_parametercount, buf(idx + 1, 2))
       tree:add(pf_command_msg_parameters, buf(idx + msg_meta_length, data_length))
       return idx + msg_meta_length + data_length
-   elseif msg_type == 3 or msg_type == 7 then
+   elseif msg_type == 3 or msg_type == 7 then -- Operation Response
       local msg_meta_length = 6
       local data_length = len - msg_header_length - msg_meta_length
       tree:add(pf_command_op_code, buf(idx, 1))
@@ -224,7 +224,7 @@ function read_message(buf, idx, len, root)
       tree:add(pf_command_msg_parametercount, buf(idx + 4, 2))
       tree:add(pf_command_msg_parameters, buf(idx + msg_meta_length, data_length))
       return idx + msg_meta_length + data_length
-   elseif msg_type == 4 then
+   elseif msg_type == 4 then -- Event Data
       local msg_meta_length = 3
       local data_length = len - msg_header_length - msg_meta_length
       tree:add(pf_command_ev_code, buf(idx, 1))
@@ -257,30 +257,30 @@ function read_command(buf, idx, num, root)
    tree:set_len(command_length)
    idx = idx + command_header_length
 
-   if command == 1 then
+   if command == 1 then -- Acknowledge
       local command_meta_length = 8
       tree:add(pf_ack_recvrelseqnum, buf(idx, 4))
       tree:add(pf_ack_recvsenttime, buf(idx + 4, 4))
       return idx + command_meta_length
-   elseif command == 2 then
+   elseif command == 2 then -- Connect
       -- TODO: figure out what these bytes are
       local data_length = command_length - command_header_length
       tree:add(pf_conn_data, buf(idx, data_length))
       return idx + data_length
-   elseif command == 3 then
+   elseif command == 3 then -- Verify Connect
       -- TODO: figure out what these bytes are
       local data_length = command_length - command_header_length
       tree:add(pf_connverify_data, buf(idx, data_length))
       return idx + data_length
-   elseif command == 6 then
+   elseif command == 6 then -- Send Reliable
       local data_length = command_length - command_header_length
       return read_message(buf, idx, data_length, tree)
-   elseif command == 7 then
+   elseif command == 7 then -- Send Unreliable
       local command_meta_length = 4
       tree:add(pf_sendunrel_unrelseqnum, buf(idx, 4))
       local data_length = command_length - command_header_length - command_meta_length
       return read_message(buf, idx + command_meta_length, data_length, tree)
-   elseif command == 8 then
+   elseif command == 8 then -- Send Reliable Fragment
       local command_meta_length = 20
       tree:add(pf_sendfrag_startseqnum, buf(idx, 4))
       tree:add(pf_sendfrag_fragcount, buf(idx + 4, 4))
@@ -309,6 +309,7 @@ function photon.dissector(buf, pkt, root)
     tree:add(pf_protoheader_challenge, buf(8, 4))
 
     if crcenabled_field()() == 0xCC then
+      -- If CRC is enabled, consume the CRC value from buf 
       proto_header_len = 16
       tree:add(pf_protoheader_crcvalue, buf(12, 4))
     end

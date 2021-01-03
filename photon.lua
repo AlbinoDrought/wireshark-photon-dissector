@@ -232,7 +232,9 @@ function read_message(buf, idx, len, root)
       tree:add(pf_command_msg_parameters, buf(idx + msg_meta_length, data_length))
       return idx + msg_meta_length + data_length
    else
-      return idx
+      -- consume the entire length for unknown messages
+      local data_length = len - msg_header_length
+      return idx + data_length
    end
 end
 

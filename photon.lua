@@ -324,4 +324,14 @@ function photon.dissector(buf, pkt, root)
     return idx
 end
 
+-- Name Server
+DissectorTable.get("udp.port"):add(5058, photon)
+DissectorTable.get("udp.port"):add(27000, photon)
+
+-- Master Server
 DissectorTable.get("udp.port"):add(5056, photon)
+DissectorTable.get("udp.port"):add(27002, photon)
+
+-- Game Server
+DissectorTable.get("udp.port"):add(5055, photon)
+DissectorTable.get("udp.port"):add(27001, photon)
